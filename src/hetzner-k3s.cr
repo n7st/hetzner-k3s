@@ -19,11 +19,17 @@ module Hetzner::K3s
                   short: "c",
                   required: true
 
+      define_flag output_file : String,
+                  description: "The path of the JSON output file",
+                  long: "output-file",
+                  short: "o",
+                  default: ""
+
       def run
         configuration = Configuration::Loader.new(flags.configuration_file_path, nil)
         configuration.validate(:create)
 
-        Cluster::Create.new(configuration: configuration).run
+        Cluster::Create.new(configuration: configuration, output_file: flags.output_file).run
       end
     end
 

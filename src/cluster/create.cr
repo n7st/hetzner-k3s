@@ -17,6 +17,7 @@ class Cluster::Create
   MAX_INSTANCES_PER_PLACEMENT_GROUP = 10 # Assuming this is the maximum number of instances per placement group
 
   private getter configuration : Configuration::Loader
+  private getter output_file : String
   private getter hetzner_client : Hetzner::Client do
     configuration.hetzner_client
   end
@@ -51,7 +52,7 @@ class Cluster::Create
   private property mutex : Mutex = Mutex.new
   private property all_placement_groups : Array(Hetzner::PlacementGroup) = Array(Hetzner::PlacementGroup).new
 
-  def initialize(@configuration)
+  def initialize(@configuration, @output_file)
     @network = find_or_create_network if settings.networking.private_network.enabled
     @ssh_key = create_ssh_key
     @all_placement_groups = Hetzner::PlacementGroup::All.new(hetzner_client).delete_unused
@@ -87,6 +88,10 @@ class Cluster::Create
     completed_channel.receive
 
     delete_unused_placement_groups
+
+    write_output_json
+
+    instances
   end
 
   private def initialize_master_instance_creators
@@ -341,6 +346,12 @@ class Cluster::Create
       hetzner_client: hetzner_client,
       settings: settings
     ).run
+  end
+
+  private def write_output_json
+    return if output_file.empty?
+
+    File.open(output_file, "w") { |file| file.puts(instances.to_json) }
   end
 
   private def default_log_prefix
